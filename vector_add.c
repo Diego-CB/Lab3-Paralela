@@ -37,26 +37,26 @@ void randGen(int size, double array[]) {
 
 /*---------------------------------------------------------------------*/
 int main(void) {
-   int n;
+   int n = 10000000;
    double *x, *y, *z;
    clock_t start_t, end_t;
    double total_t;
 
-   Read_n(&n);
+   start_t = clock();
+   // Read_n(&n);
    Allocate_vectors(&x, &y, &z, n);
-   
+
    randGen(n, x);
    randGen(n, y);
 
-   start_t = clock();
    Vector_sum(x, y, z, n);
    end_t = clock();
-   total_t = (double)(end_t - start_t) / CLOCKS_PER_SEC;
+   total_t = (double)(end_t - start_t) / CLOCKS_PER_SEC * 10;
 
    Print_vector(x, n, "X");
    Print_vector(y, n, "Y");
    Print_vector(z, n, "The sum is");
-   printf("\nTook %f ms to run\n", total_t);
+   printf("\nTook %f s to run\n", total_t);
 
    free(x);
    free(y);

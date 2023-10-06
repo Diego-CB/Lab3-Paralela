@@ -46,7 +46,7 @@ int main(void) {
    double *local_x, *local_y, *local_z;
    MPI_Comm comm;
    double tstart, tend;
-   n = 100000;
+   n = 100000000;
 
    MPI_Init(NULL, NULL);
    comm = MPI_COMM_WORLD;
@@ -55,13 +55,17 @@ int main(void) {
 
    //Read_n(&n, &local_n, my_rank, comm_sz, comm);
    //    n = 10000000;
-   tstart = MPI_Wtime();
+   if(my_rank==0){
+      printf("startTime\n");
+      tstart = MPI_Wtime();
+   }
 
-   Allocate_vectors(&local_x, &local_y, &local_z, 100000, comm);
+   Allocate_vectors(&local_x, &local_y, &local_z, 100000000, comm);
    Read_vector(local_x, local_n, n, "x", my_rank, comm);
    //Print_vector(local_x, local_n, n, "x is", my_rank, comm);
    Read_vector(local_y, local_n, n, "y", my_rank, comm);
    //Print_vector(local_y, local_n, n, "y is", my_rank, comm);
+
 
    Parallel_vector_sum(local_x, local_y, local_z, local_n);
 
@@ -70,14 +74,14 @@ int main(void) {
       Print_vector(local_x, local_n, n, "X", my_rank, comm);
       Print_vector(local_y, local_n, n, "Y", my_rank, comm);
       Print_vector(local_z, local_n, n, "The sum is", my_rank, comm);
-      printf("\nTook %f ms to run\n", (tend-tstart)*1000);
+      printf("\nTook %f s to run\n", (tend-tstart));
+
 
    free(local_x);
    free(local_y);
    free(local_z);
 
    MPI_Finalize();
-
    return 0;
 }  /* main */
 
