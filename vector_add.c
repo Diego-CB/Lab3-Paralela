@@ -16,6 +16,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 void Read_n(int* n_p);
 void Allocate_vectors(double** x_pp, double** y_pp, double** z_pp, int n);
@@ -23,20 +24,39 @@ void Read_vector(double a[], int n, char vec_name[]);
 void Print_vector(double b[], int n, char title[]);
 void Vector_sum(double x[], double y[], double z[], int n);
 
+void randGen(int size, double array[]) {
+   srand(1);
+
+   for (int i = 0; i < size; i++) {
+      int val = rand() % 1000;
+      val = val < 0 ? val * -1 : val;
+      // printf("> %d\n", val);
+      array[i] = val;
+   }
+}
+
 /*---------------------------------------------------------------------*/
 int main(void) {
    int n;
    double *x, *y, *z;
+   clock_t start_t, end_t;
+   double total_t;
 
    Read_n(&n);
    Allocate_vectors(&x, &y, &z, n);
    
-   Read_vector(x, n, "x");
-   Read_vector(y, n, "y");
-   
-   Vector_sum(x, y, z, n);
+   randGen(n, x);
+   randGen(n, y);
 
+   start_t = clock();
+   Vector_sum(x, y, z, n);
+   end_t = clock();
+   total_t = (double)(end_t - start_t) / CLOCKS_PER_SEC;
+
+   Print_vector(x, n, "X");
+   Print_vector(y, n, "Y");
    Print_vector(z, n, "The sum is");
+   printf("\nTook %f ms to run\n", total_t);
 
    free(x);
    free(y);
@@ -112,9 +132,16 @@ void Print_vector(
       int     n       /* in */, 
       char    title[] /* in */) {
    int i;
-   printf("%s\n", title);
-   for (i = 0; i < n; i++)
+   printf("\n%s\n", title);
+
+   printf("---- Primeros 10 elementos ----\n");
+   for (i = 0; i < 10; i++)
       printf("%f ", b[i]);
+
+   printf("\n---- Ultimos 10 elementos ----\n");
+   for (i = n; i > n - 10; i--)
+      printf("%f ", b[i]);
+
    printf("\n");
 }  /* Print_vector */
 

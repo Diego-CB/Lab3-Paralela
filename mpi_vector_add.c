@@ -39,7 +39,6 @@ void Print_vector(double local_b[], int local_n, int n, char title[],
 void Parallel_vector_sum(double local_x[], double local_y[],
       double local_z[], int local_n);
 
-
 /*-------------------------------------------------------------------*/
 int main(void) {
    int n, local_n;
@@ -47,6 +46,7 @@ int main(void) {
    double *local_x, *local_y, *local_z;
    MPI_Comm comm;
    double tstart, tend;
+   n = 100000;
 
    MPI_Init(NULL, NULL);
    comm = MPI_COMM_WORLD;
@@ -54,21 +54,23 @@ int main(void) {
    MPI_Comm_rank(comm, &my_rank);
 
    //Read_n(&n, &local_n, my_rank, comm_sz, comm);
-   n = 10000000;
+   //    n = 10000000;
    tstart = MPI_Wtime();
-   Allocate_vectors(&local_x, &local_y, &local_z, local_n, comm);
 
+   Allocate_vectors(&local_x, &local_y, &local_z, 100000, comm);
    Read_vector(local_x, local_n, n, "x", my_rank, comm);
    //Print_vector(local_x, local_n, n, "x is", my_rank, comm);
    Read_vector(local_y, local_n, n, "y", my_rank, comm);
    //Print_vector(local_y, local_n, n, "y is", my_rank, comm);
 
    Parallel_vector_sum(local_x, local_y, local_z, local_n);
-   tend = MPI_Wtime();
 
-   //Print_vector(local_z, local_n, n, "The sum is", my_rank, comm);
    if(my_rank==0)
-    printf("\nTook %f ms to run\n", (tend-tstart)*1000);
+      tend = MPI_Wtime();
+      Print_vector(local_x, local_n, n, "X", my_rank, comm);
+      Print_vector(local_y, local_n, n, "Y", my_rank, comm);
+      Print_vector(local_z, local_n, n, "The sum is", my_rank, comm);
+      printf("\nTook %f ms to run\n", (tend-tstart)*1000);
 
    free(local_x);
    free(local_y);
@@ -213,14 +215,17 @@ void Read_vector(
    char* fname = "Read_vector";
 
    if (my_rank == 0) {
+      srand(1);
       a = malloc(n*sizeof(double));
       if (a == NULL) local_ok = 0;
       Check_for_error(local_ok, fname, "Can't allocate temporary vector",
             comm);
       //printf("Enter the vector %s\n", vec_name);
       //fill vec with indez
-      for (i = 0; i < n; i++)
-         a[i] = i;
+      for (i = 0; i < n; i++) {
+         int val = rand() % 1000;
+         a[i] = val;
+      }
       MPI_Scatter(a, local_n, MPI_DOUBLE, local_a, local_n, MPI_DOUBLE, 0,
          comm);
       free(a);
@@ -270,10 +275,17 @@ void Print_vector(
             comm);
       MPI_Gather(local_b, local_n, MPI_DOUBLE, b, local_n, MPI_DOUBLE,
             0, comm);
-      printf("%s\n", title);
-      for (i = 0; i < n; i++)
-         printf("%f ", b[i]);
-      printf("\n");
+
+      printf("\n%s\n", title);
+
+      printf("---- Primeros 10 elementos ----\n");
+      for (i = 0; i < 10; i++)
+            printf("%f ", b[i]);
+
+      printf("\n---- Ultimos 10 elementos ----\n");
+      for (i = n; i > n - 10; i--)
+            printf("%f ", b[i]);
+
       free(b);
    } else {
       Check_for_error(local_ok, fname, "Can't allocate temporary vector",
@@ -282,7 +294,6 @@ void Print_vector(
          comm);
    }
 }  /* Print_vector */
-
 
 /*-------------------------------------------------------------------
  * Function:  Parallel_vector_sum
