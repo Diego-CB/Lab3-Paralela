@@ -31,30 +31,22 @@ void Check_for_error(int local_ok, char fname[], char message[],
 void Read_n(int* n_p, int* local_n_p, int my_rank, int comm_sz,
       MPI_Comm comm);
 void Allocate_vectors(double** local_x_pp, double** local_y_pp,
-      double** local_z_pp, double** local_zz_pp, double** local_zzz_pp, int local_n, MPI_Comm comm);
+      double** local_z_pp, int local_n, MPI_Comm comm);
 void Read_vector(double local_a[], int local_n, int n, char vec_name[],
       int my_rank, MPI_Comm comm);
 void Print_vector(double local_b[], int local_n, int n, char title[],
       int my_rank, MPI_Comm comm);
 void Parallel_vector_sum(double local_x[], double local_y[],
       double local_z[], int local_n);
-void Parallel_dot(
-      double  local_x[]  /* in  */,
-      double  local_y[]  /* in  */,
-      double  local_z[]  /* out */,
-      int     local_n    /* in  */) ;
-
-void Parallel_escalar_prod(double local_x[], double escalar, double local_z[], int local_n);
 
 /*-------------------------------------------------------------------*/
 int main(void) {
    int n, local_n;
    int comm_sz, my_rank;
-   double *local_x, *local_y, *local_escalar_x, *local_escalar_y, *local_punto;
-   double global_punto;
+   double *local_x, *local_y, *local_z;
    MPI_Comm comm;
    double tstart, tend;
-   n = 10;
+   n = 100000000;
 
    MPI_Init(NULL, NULL);
    comm = MPI_COMM_WORLD;
@@ -64,46 +56,30 @@ int main(void) {
    //Read_n(&n, &local_n, my_rank, comm_sz, comm);
    //    n = 10000000;
    if(my_rank==0){
-      // printf("startTime\n");
+      printf("startTime\n");
       tstart = MPI_Wtime();
    }
 
-   double *b = malloc(n * sizeof(double));
-
-   Allocate_vectors(&local_x, &local_y, &local_escalar_x, &local_escalar_y, &local_punto, n, comm);
+   Allocate_vectors(&local_x, &local_y, &local_z, 100000000, comm);
    Read_vector(local_x, local_n, n, "x", my_rank, comm);
    //Print_vector(local_x, local_n, n, "x is", my_rank, comm);
    Read_vector(local_y, local_n, n, "y", my_rank, comm);
    //Print_vector(local_y, local_n, n, "y is", my_rank, comm);
 
-   // Producto Escalar
-   Parallel_escalar_prod(local_x, 10, local_escalar_x, local_n);
-   Parallel_escalar_prod(local_y, 10, local_escalar_y, local_n);
 
-   // Producto punto
-   Parallel_dot(local_x, local_y, local_punto, local_n);
-//    if (b == NULL) local_ok = 0;
-//       Check_for_error(local_ok, fname, "Can't allocate temporary vector", comm);
-
-   MPI_Gather(local_punto, local_n, MPI_DOUBLE, b, local_n, MPI_DOUBLE,0, comm);
-
-   MPI_Allreduce(b, &global_punto, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
+   Parallel_vector_sum(local_x, local_y, local_z, local_n);
 
    if(my_rank==0)
       tend = MPI_Wtime();
-      Print_vector(local_escalar_x, local_n, n, "escalar X", my_rank, comm);
-      Print_vector(local_escalar_y, local_n, n, "escalar Y", my_rank, comm);
-      Print_vector(local_punto, local_n, n, "Punto", my_rank, comm);
-      printf("Producto punto: %f\n", global_punto);
-      // Print_vector(local_z, local_n, n, "The sum is", my_rank, comm);
-      // printf("\nTook %f s to run\n", (tend-tstart));
+      Print_vector(local_x, local_n, n, "X", my_rank, comm);
+      Print_vector(local_y, local_n, n, "Y", my_rank, comm);
+      Print_vector(local_z, local_n, n, "The sum is", my_rank, comm);
+      printf("\nTook %f s to run\n", (tend-tstart));
 
 
    free(local_x);
    free(local_y);
-   free(local_escalar_x);
-   free(local_escalar_y);
+   free(local_z);
 
    MPI_Finalize();
    return 0;
@@ -195,8 +171,6 @@ void Allocate_vectors(
       double**   local_x_pp  /* out */,
       double**   local_y_pp  /* out */,
       double**   local_z_pp  /* out */,
-      double**   local_zz_pp  /* out */,
-      double**   local_zzz_pp  /* out */,
       int        local_n     /* in  */,
       MPI_Comm   comm        /* in  */) {
    int local_ok = 1;
@@ -205,8 +179,6 @@ void Allocate_vectors(
    *local_x_pp = malloc(local_n*sizeof(double));
    *local_y_pp = malloc(local_n*sizeof(double));
    *local_z_pp = malloc(local_n*sizeof(double));
-   *local_zz_pp = malloc(local_n*sizeof(double));
-   *local_zzz_pp = malloc(local_n*sizeof(double));
 
    if (*local_x_pp == NULL || *local_y_pp == NULL ||
        *local_z_pp == NULL) local_ok = 0;
@@ -309,11 +281,15 @@ void Print_vector(
             0, comm);
 
       printf("\n%s\n", title);
-      for (i = 0; i < n; i++)
+
+      printf("---- Primeros 10 elementos ----\n");
+      for (i = 0; i < 10; i++)
             printf("%f ", b[i]);
 
-      printf("\n");
-      
+      printf("\n---- Ultimos 10 elementos ----\n");
+      for (i = n; i > n - 10; i--)
+            printf("%f ", b[i]);
+
       free(b);
    } else {
       Check_for_error(local_ok, fname, "Can't allocate temporary vector",
@@ -341,27 +317,4 @@ void Parallel_vector_sum(
 
    for (local_i = 0; local_i < local_n; local_i++)
       local_z[local_i] = local_x[local_i] + local_y[local_i];
-}  /* Parallel_vector_sum */
-
-void Parallel_escalar_prod(
-      double  local_x[]  /* in  */,
-      double escalar     /* in  */,
-      double  local_z[]  /* out */,
-      int     local_n    /* in  */) {
-   int local_i;
-
-   for (local_i = 0; local_i < local_n; local_i++)
-      local_z[local_i] = local_x[local_i] * escalar;
-}  /* Parallel_vector_sum */
-
-void Parallel_dot(
-      double  local_x[]  /* in  */,
-      double  local_y[]  /* in  */,
-      double  local_z[]  /* out */,
-      int     local_n    /* in  */) {
-   int local_i;
-
-   for (local_i = 0; local_i < local_n; local_i++){
-      local_z[local_i] = local_x[local_i] * local_y[local_i] + 1000;
-   }
 }  /* Parallel_vector_sum */
